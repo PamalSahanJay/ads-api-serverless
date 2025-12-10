@@ -17,15 +17,20 @@ Resources:
       FunctionName: create-ad
       CodeUri: src/
       Handler: handlers/createAd.lambdaHandler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref AdsTable
       Runtime: nodejs24.x
+      Policies:
+        - AmazonDynamoDBFullAccess
       Architectures:
       - x86_64
       Events:
         CreateAdApi:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /hello
-            Method: get
+            Path: /ads
+            Method: post
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -35,10 +40,22 @@ Resources:
         # EntryPoints:
         # - /handlers/app.ts
 
+  AdsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: AdsTable
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
 Outputs:
   CreateAdApi:
     Description: API Gateway endpoint URL for Prod stage
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/hello/"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/ads/"
   CreateAdFunction:
     Description: Create Ad Lambda Function ARN
     Value: !GetAtt CreateAdFunction.Arn
