@@ -31,14 +31,17 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { post } from '../services/dynamoDB';
 // import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'crypto';
+import { CreateAdRequest } from '../types/CreateAdRequest';
+import { AdItem } from '../types/AdItem';
 
 const client = new DynamoDBClient({});
 const dynamo = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = process.env.TABLE_NAME || 'AdsTable';
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     if (!event.body) {
       return {
@@ -51,9 +54,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       };
     }
 
-    const { title, price } = JSON.parse(event.body);
+    const data: CreateAdRequest = JSON.parse(event.body);
 
-    if (!title || !price) {
+    if (!data.title || !data.price) {
       return {
         statusCode: 400,
         headers: {
@@ -64,20 +67,23 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       };
     }
 
-    const id = randomUUID();
-    const createdAt = new Date().toISOString();
+    // const id = randomUUID();
+    // const createdAt = new Date().toISOString();
 
-    const item = {
-      id,
-      title,
-      price: Number(price),
-      createdAt,
-    };
+    // const item = {
+    //   id,
+    //   title,
+    //   price: Number(price),
+    //   createdAt,
+    // };
 
-    await dynamo.send(new PutCommand({
-      TableName: TABLE_NAME,
-      Item: item,
-    }));
+    // await dynamo.send(new PutCommand({
+    //   TableName: TABLE_NAME,
+    //   Item: item,
+    // }));
+
+      const item: AdItem = await post(data); // Use the service
+
 
     return {
       statusCode: 201,

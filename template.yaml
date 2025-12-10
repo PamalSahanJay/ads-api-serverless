@@ -16,7 +16,7 @@ Resources:
     Properties:
       FunctionName: create-ad
       CodeUri: src/
-      Handler: handlers/createAd.lambdaHandler
+      Handler: handlers/handler.createAd
       Environment:
         Variables:
           TABLE_NAME: !Ref AdsTable
