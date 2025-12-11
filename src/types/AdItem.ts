@@ -4,4 +4,5 @@ export interface AdItem {
     price: number;
     createdAt: string;
     imageBase64?: string;
+    imageUrl?: string;
 }

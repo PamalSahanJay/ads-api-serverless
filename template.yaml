@@ -10,7 +10,34 @@ Globals:
     # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
+
 Resources:
+
+  AdsImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "ads-image-bucket-${AWS::AccountId}-${AWS::Region}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: ['*']
+
+  AdsImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AdsImagesBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub "${AdsImagesBucket.Arn}/*"
 
   AdsUserPool:
     Type: AWS::Cognito::UserPool
@@ -68,9 +95,12 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref AdsTable
+          BUCKET_NAME: !Ref AdsImagesBucket
       Runtime: nodejs24.x
       Policies:
         - AmazonDynamoDBFullAccess
+        - S3FullAccessPolicy:  # Add this for image uploads
+            BucketName: !Ref AdsImagesBucket
       Architectures:
       - x86_64
       Events:
@@ -80,8 +110,8 @@ Resources:
             RestApiId: !Ref AdsApi
             Path: /ads
             Method: post
-            Auth:
-              Authorizer: CognitoAuth
+            # Auth:
+            #   Authorizer: CognitoAuth
 
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild

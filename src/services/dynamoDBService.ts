@@ -9,7 +9,7 @@ const client = new DynamoDBClient({ region: "us-east-1" });
 const dynamo = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = process.env.TABLE_NAME || 'AdsTable';
 
-const post = async (data: CreateAdRequest) => {
+const post = async (data: CreateAdRequest, imageUrl?: string) => {
     try {
         const id = randomUUID();
         const createdAt = new Date().toISOString();
@@ -18,7 +18,7 @@ const post = async (data: CreateAdRequest) => {
             title: data.title,
             price: Number(data.price),
             createdAt,
-            imageBase64: data.imageBase64,
+            imageUrl: imageUrl,
         }
 
         const params = {

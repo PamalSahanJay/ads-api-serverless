@@ -31,7 +31,8 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { post } from '../services/dynamoDB';
+import * as DynamoDBService from '../services/dynamoDbService';
+import * as S3Service from '../services/s3Service';
 // import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'crypto';
 import { CreateAdRequest } from '../types/CreateAdRequest';
@@ -67,22 +68,19 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       };
     }
 
-    // const id = randomUUID();
-    // const createdAt = new Date().toISOString();
+    let imageUrl: string | undefined;
+    if (data.imageBase64) {
+      console.log(`Uploading image to S3`);
+      try {
+        imageUrl = await S3Service.uploadImage(data.imageBase64);
+        console.log(`Image uploaded: ${imageUrl}`);
+      } catch (imageError) {
+        console.error(`Image upload failed:`, imageError);
+        // Continue without image - don't fail entire request
+      }
+    }
 
-    // const item = {
-    //   id,
-    //   title,
-    //   price: Number(price),
-    //   createdAt,
-    // };
-
-    // await dynamo.send(new PutCommand({
-    //   TableName: TABLE_NAME,
-    //   Item: item,
-    // }));
-
-      const item: AdItem = await post(data); // Use the service
+    const item: AdItem = await DynamoDBService.post(data, imageUrl); // Use the service
 
 
     return {
