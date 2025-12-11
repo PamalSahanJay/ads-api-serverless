@@ -11,6 +11,54 @@ Globals:
     LoggingConfig:
       LogFormat: JSON
 Resources:
+
+  AdsUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: AdsUserPool
+
+  AdsUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: AdsUserPoolClient
+      UserPoolId: !Ref AdsUserPool
+      AllowedOAuthFlowsUserPoolClient: true
+      SupportedIdentityProviders:
+        - COGNITO
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - profile
+        - openid
+      AllowedOAuthFlows:
+        - implicit
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+      CallbackURLs:
+        - http://localhost:3000   # Your redirect URL 
+
+  AdsUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: ads-userpool-domain   # MUST be globally unique
+      UserPoolId: !Ref AdsUserPool
+
+  AdsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: AdsApi
+      StageName: prod
+      Auth:
+        DefaultAuthorizer: CognitoAuth
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !GetAtt AdsUserPool.Arn
+            # Identity:
+            #   Header: Authorization # Default
+
   CreateAdFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -29,8 +77,12 @@ Resources:
         CreateAdApi:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
+            RestApiId: !Ref AdsApi
             Path: /ads
             Method: post
+            Auth:
+              Authorizer: CognitoAuth
+
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
       BuildProperties:
@@ -53,12 +105,18 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 
 Outputs:
-  CreateAdApi:
+  Api:
     Description: API Gateway endpoint URL for Prod stage
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/ads/"
-  CreateAdFunction:
-    Description: Create Ad Lambda Function ARN
-    Value: !GetAtt CreateAdFunction.Arn
-  CreateAdFunctionIamRole:
-    Description: IAM Role for Create Ad function
-    Value: !GetAtt CreateAdFunctionRole.Arn
+    Value: !Sub "https://${AdsApi}.execute-api.${AWS::Region}.amazonaws.com/prod/ads/"
+  
+  CognitoHostedURL:
+    Description: Cognito Hosted UI URL for authentication
+    Value: !Sub "https://${AdsUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/authorize?client_id=${AdsUserPoolClient}&response_type=token&scope=openid+profile+email&redirect_uri=http://localhost:3000"
+
+  CognitoPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref AdsUserPool
+    
+  CognitoPoolClientId:
+    Description: Cognito User Pool Client ID  
+    Value: !Ref AdsUserPoolClient
