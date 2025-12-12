@@ -42,7 +42,7 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       throw new ValidationError('Price is required');
     }
 
-    if (typeof data.price !== 'number' || data.price < 0) {
+    if (typeof data.price !== 'number' || data.price <= 0) {
       throw new ValidationError('Price must be a positive number');
     }
 
