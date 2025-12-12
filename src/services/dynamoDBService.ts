@@ -1,7 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { randomUUID } from 'crypto';
-import { CreateAdRequest } from '../types/CreateAdRequest';
+import { CreateAdRequest } from '../types/createAdRequest';
 import { AdItem } from '../types/AdItem';
 
 

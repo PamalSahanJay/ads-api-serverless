@@ -31,12 +31,12 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
-import * as DynamoDBService from '../services/dynamoDbService';
+import * as DynamoDBService from '../services/dynamoDBService';
 import * as S3Service from '../services/s3Service';
 import * as SNSService from '../services/snsNotificationService';
 // import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'crypto';
-import { CreateAdRequest } from '../types/CreateAdRequest';
+import { CreateAdRequest } from '../types/createAdRequest';
 import { AdItem } from '../types/AdItem';
 import { PublishCommandOutput } from '@aws-sdk/client-sns/dist-types/commands/PublishCommand';
 
