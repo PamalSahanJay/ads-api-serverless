@@ -5,7 +5,7 @@ Description: Ads API - Serverless application
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 30
 
     # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
@@ -38,6 +38,19 @@ Resources:
             Principal: '*'
             Action: s3:GetObject
             Resource: !Sub "${AdsImagesBucket.Arn}/*"
+
+  AdsNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "AdsNotifications-${AWS::AccountId}"
+      DisplayName: "Ads API Notifications"
+
+  AdsEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AdsNotificationTopic
+      Protocol: email
+      Endpoint: p.s.jayawickrama.work@gmail.com
 
   AdsUserPool:
     Type: AWS::Cognito::UserPool
@@ -78,11 +91,12 @@ Resources:
     Properties:
       Name: AdsApi
       StageName: prod
-      Auth:
-        DefaultAuthorizer: CognitoAuth
-        Authorizers:
-          CognitoAuth:
-            UserPoolArn: !GetAtt AdsUserPool.Arn
+      # Auth:
+      #   DefaultAuthorizer: CognitoAuth
+      #   Authorizers:
+      #     CognitoAuth:
+      #       UserPoolArn: !GetAtt AdsUserPool.Arn
+
             # Identity:
             #   Header: Authorization # Default
 
@@ -96,11 +110,14 @@ Resources:
         Variables:
           TABLE_NAME: !Ref AdsTable
           BUCKET_NAME: !Ref AdsImagesBucket
+          SNS_TOPIC_ARN: !Ref AdsNotificationTopic
       Runtime: nodejs24.x
       Policies:
         - AmazonDynamoDBFullAccess
-        - S3FullAccessPolicy:  # Add this for image uploads
+        - S3FullAccessPolicy:
             BucketName: !Ref AdsImagesBucket
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt AdsNotificationTopic.TopicName
       Architectures:
       - x86_64
       Events:
@@ -150,3 +167,7 @@ Outputs:
   CognitoPoolClientId:
     Description: Cognito User Pool Client ID  
     Value: !Ref AdsUserPoolClient
+
+  SNSTopicArn:
+    Description: SNS Topic ARN for notifications
+    Value: !Ref AdsNotificationTopic

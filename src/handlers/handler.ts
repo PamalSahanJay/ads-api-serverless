@@ -33,10 +33,12 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as DynamoDBService from '../services/dynamoDbService';
 import * as S3Service from '../services/s3Service';
+import * as SNSService from '../services/snsNotificationService';
 // import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'crypto';
 import { CreateAdRequest } from '../types/CreateAdRequest';
 import { AdItem } from '../types/AdItem';
+import { PublishCommandOutput } from '@aws-sdk/client-sns/dist-types/commands/PublishCommand';
 
 const client = new DynamoDBClient({});
 const dynamo = DynamoDBDocumentClient.from(client);
@@ -80,8 +82,20 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       }
     }
 
-    const item: AdItem = await DynamoDBService.post(data, imageUrl); // Use the service
+    const item: AdItem = await DynamoDBService.post(data, imageUrl);
+    console.log('Ad created in DynamoDB:', item);
 
+     let snsResult: PublishCommandOutput | undefined; 
+    try {
+      snsResult = await SNSService.sendAdCreatedNotification(item);
+      if (snsResult) {
+        console.log('SNS notification sent successfully. MessageId:', snsResult);
+      } else {
+        console.warn('SNS notification was skipped (no topic configured)');
+      }
+    } catch (snsError) {
+      console.error('SNS notification failed:', snsError);
+    }
 
     return {
       statusCode: 201,
@@ -92,6 +106,7 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       body: JSON.stringify({
         message: 'Ad created successfully',
         ad: item,
+        snsMessageId: snsResult ? snsResult.MessageId : null,
       }),
     };
   } catch (error: any) {
