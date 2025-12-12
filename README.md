@@ -1,127 +1,163 @@
-# ads-api
+# Ads API - Serverless Application
 
-This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
+A serverless AWS application built with Node.js and TypeScript that allows authenticated users to create advertisement records. When an ad is created, the service stores the record in DynamoDB, optionally uploads an image to S3, and publishes an SNS notification.
 
-- hello-world - Code for the application's Lambda function written in TypeScript.
-- events - Invocation events that you can use to invoke the function.
-- hello-world/tests - Unit tests for the application code. 
-- template.yaml - A template that defines the application's AWS resources.
+## Technologies Used
 
-The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
+- **Runtime**: Node.js 24.x with TypeScript
+- **Compute**: AWS Lambda
+- **API**: Amazon API Gateway (REST API)
+- **Authentication**: AWS Cognito User Pool
+- **Database**: Amazon DynamoDB (AdsTable)
+- **Storage**: Amazon S3 (for image uploads)
+- **Messaging**: Amazon SNS (for notifications)
+- **Infrastructure as Code**: AWS SAM (Serverless Application Model)
+- **Testing**: Jest with TypeScript
+- **CI/CD**: GitHub Actions
+- **Build Tool**: esbuild
 
-If you prefer to use an integrated development environment (IDE) to build and test your application, you can use the AWS Toolkit.  
-The AWS Toolkit is an open source plug-in for popular IDEs that uses the SAM CLI to build and deploy serverless applications on AWS. The AWS Toolkit also adds a simplified step-through debugging experience for Lambda function code. See the following links to get started.
 
-* [CLion](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [GoLand](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [IntelliJ](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [WebStorm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [Rider](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [PhpStorm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [PyCharm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [RubyMine](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [DataGrip](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [VS Code](https://docs.aws.amazon.com/toolkit-for-vscode/latest/userguide/welcome.html)
-* [Visual Studio](https://docs.aws.amazon.com/toolkit-for-visual-studio/latest/user-guide/welcome.html)
+### Key Directories
 
-## Deploy the sample application
+- **`src/`** - Contains all application source code organized by responsibility
+  - **`handlers/`** - Lambda function entry points that handle API Gateway events
+  - **`services/`** - Business logic and AWS service integrations
+  - **`types/`** - TypeScript interfaces and type definitions
+  - **`utils/`** - Reusable utility functions and helpers
 
-The Serverless Application Model Command Line Interface (SAM CLI) is an extension of the AWS CLI that adds functionality for building and testing Lambda applications. It uses Docker to run your functions in an Amazon Linux environment that matches Lambda. It can also emulate your application's build environment and API.
+- **`tests/`** - Unit tests mirroring the source code structure
 
-To use the SAM CLI, you need the following tools.
+- **`template.yaml`** - AWS SAM template defining the serverless infrastructure (Lambda, API Gateway, DynamoDB, S3, SNS, Cognito)
 
-* SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-* Node.js - [Install Node.js 22](https://nodejs.org/en/), including the NPM package management tool.
-* Docker - [Install Docker community edition](https://hub.docker.com/search/?type=edition&offering=community)
 
-To build and deploy your application for the first time, run the following in your shell:
 
-```bash
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js 24.x** - [Download Node.js](https://nodejs.org/)
+- **AWS CLI** - [Install AWS CLI](https://aws.amazon.com/cli/)
+- **AWS SAM CLI** - [Install SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+- **Docker** - [Install Docker](https://www.docker.com/get-started) (required for local testing)
+- **Git** - For cloning the repository
+
+## Setup Instructions
+
+### 1. Clone the Repository
+
+- https://github.com/PamalSahanJay/ads-api-serverless.git
+- cd ads-api-serverless
+
+### 2. Install Dependencies
+
+- npm install
+
+### 3. Configure AWS Credentials
+
+Configure your AWS credentials using one of the following methods:
+
+**Option A: Interactive AWS CLI Configuration**
+
+aws configure
+
+This will prompt you for:
+- AWS Access Key ID
+- AWS Secret Access Key
+- Default region (e.g., `us-east-1`)
+- Default output format (e.g., `json`)
+
+**Option B: Non-Interactive AWS CLI Configuration**
+
+- aws configure set aws_access_key_id YOUR_AWS_ACCESS_KEY
+- aws configure set aws_secret_access_key YOUR_AWS_SECRET_KEY
+- aws configure set default.region us-east-1
+
+## Deployment to AWS
+
+### First-Time Deployment
+
 sam build
 sam deploy --guided
-```
 
-The first command will build the source of your application. The second command will package and deploy your application to AWS, with a series of prompts:
+The guided deployment will prompt you for:
 
-* **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
-* **AWS Region**: The AWS region you want to deploy your app to.
-* **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
-* **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modifies IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
-* **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
+- **Stack Name**: Name for your CloudFormation stack (e.g., `ads-api-stack`)
+- **AWS Region**: AWS region to deploy to (e.g., `us-east-1`)
+- **Confirm changes before deploy**: Review changes before applying
+- **Allow SAM CLI IAM role creation**: Required for Lambda permissions
+- **Save arguments to samconfig.toml**: Save configuration for future deployments
 
-You can find your API Gateway Endpoint URL in the output values displayed after deployment.
+### Subsequent Deployments
 
-## Use the SAM CLI to build and test locally
+After the first deployment, you can use:
 
-Build your application with the `sam build` command.
+- sam build
+- sam deploy
 
-```bash
-ads-api$ sam build
-```
+### Deployment Outputs
 
-The SAM CLI installs dependencies defined in `hello-world/package.json`, compiles TypeScript with esbuild, creates a deployment package, and saves it in the `.aws-sam/build` folder.
+After deployment, the following outputs will be displayed:
 
-Test a single function by invoking it directly with a test event. An event is a JSON document that represents the input that the function receives from the event source. Test events are included in the `events` folder in this project.
+- **Api**: API Gateway endpoint URL
+- **CognitoHostedURL**: Cognito Hosted UI URL for authentication
+- **CognitoPoolId**: Cognito User Pool ID
+- **CognitoPoolClientId**: Cognito User Pool Client ID
+- **SNSTopicArn**: SNS Topic ARN for notifications
 
-Run functions locally and invoke them with the `sam local invoke` command.
+### How to Get Authentication Token
 
-```bash
-ads-api$ sam local invoke HelloWorldFunction --event events/event.json
-```
+- Go to the Cognito User Pool (name: AdsUserPool) and create a user
+- Get the CognitoHostedURL from the Deployment Output and paste it into the web browser
+- Log in with the created user credentials
+- Get the ID token that comes with the URI after successful login
+- Use this token with the Authorization header to request ad creation
 
-The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
+for further reference use the link - https://docs.google.com/document/d/1YQ5AAcf5g6nMk_W75RjacJgtW68njdAw239Fx-efY5I/edit?usp=sharing
 
-```bash
-ads-api$ sam local start-api
-ads-api$ curl http://localhost:3000/
-```
+### How to Test SNS Notification
 
-The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
+- Go to AWS SNS and find the topic (AdsNotifications-${AWS::AccountId})
+- Create a subscription (e.g., subscription via email)
+- Verify the subscription
+- When an ad is created, an email notification will be sent to the provided email address
 
-```yaml
-      Events:
-        HelloWorld:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: get
-```
+for further reference use the link - https://docs.google.com/document/d/1YQ5AAcf5g6nMk_W75RjacJgtW68njdAw239Fx-efY5I/edit?usp=sharing
 
-## Add a resource to your application
-The application template uses AWS Serverless Application Model (AWS SAM) to define application resources. AWS SAM is an extension of AWS CloudFormation with a simpler syntax for configuring common serverless application resources such as functions, triggers, and APIs. For resources not included in [the SAM specification](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md), you can use standard [AWS CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) resource types.
+### How to Test Image deployed to the S3 bucket 
 
-## Fetch, tail, and filter Lambda function logs
+- When an ad creation request is made with an image base64, an ImageUrl is returned in the response
+- The image URL link can be clicked to view the image that corresponds to the uploaded base64 data
 
-To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs` lets you fetch logs generated by your deployed Lambda function from the command line. In addition to printing the logs on the terminal, this command has several nifty features to help you quickly find the bug.
+for further reference use the link - https://docs.google.com/document/d/1YQ5AAcf5g6nMk_W75RjacJgtW68njdAw239Fx-efY5I/edit?usp=sharing
 
-`NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
+### How to Run Unit Test
+- npm run unit
 
-```bash
-ads-api$ sam logs -n HelloWorldFunction --stack-name ads-api --tail
-```
 
-You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
 
-## Unit tests
 
-Tests are defined in the `hello-world/tests` folder in this project. Use NPM to install the [Jest test framework](https://jestjs.io/) and run unit tests.
+### API Documentation
 
-```bash
-ads-api$ cd hello-world
-hello-world$ npm install
-hello-world$ npm run test
-```
+- Ad creation request with image base 64
 
-## Cleanup
+curl --location 'https://58jc7qaj13.execute-api.us-east-1.amazonaws.com/prod/ads' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: eyJraWQiOiJtRGlQNHlmR2Rka1RmRlRrWXJsYXpIdzlSTlMzMnFVZFE0RXpEWHZveGpZPSIsImFsZyI6IlJTMjU2In0.eyJhdF9oYXNoIjoiRVBFUmRSdGdHYkxDSUdqVjhNWVFiUSIsInN1YiI6IjM0Zjg4NGI4LTUwMTEtNzAxYS1mMDBhLTQzOTM3ZTc2MGE5YiIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMV9UNG1PRUw4akIiLCJjb2duaXRvOnVzZXJuYW1lIjoicGFtYWwiLCJhdWQiOiI0M2F1NjRwbWtwZmFlYXNyOHJidGhzcHN2ZyIsImV2ZW50X2lkIjoiY2VkYTRmYzQtMGZhMy00N2Y2LWIyMzItMzIzYzA1M2ExMTEyIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3NjU1NTg5MjEsImV4cCI6MTc2NTU2MjUyMSwiaWF0IjoxNzY1NTU4OTIxLCJqdGkiOiJmODA5Zjg0Ny0yNWQyLTQzMWEtYWJmOC0xY2JlYjIwN2Y0NjciLCJlbWFpbCI6InAucy5qYXlhd2lja3JhbWEud29ya0BnbWFpbC5jb20ifQ.YQn2cAvFe2bCo90-jZUhHeGM937PrWiKxIqYqwH3OmGqaozTJg6USd3Uw4dIKA9u3Q4A_HZhVa2QxT2aDYvqz14J57Y3kvRFIEmHwPVpMvXVJwlGm4MtqPy8dhuYvM59CPdM9BWxs87Z9FACbNdYQ0kuUgeZYpotwXI6aLihMTBfENJqyESWHEiZ2NT7DvCq75CmTgVlpFuBfCfZgK75YwIePCToxaTvla0BqPMkFVir2hOKrtwzoXBwoIK6igvQrC_53yn_Y_Li3vuxqEkV-oYmiPnyLkLyjIrfontet7k1MdflzIGn2v0AdlHb9TjGi5BcjHMF9Q0LTa0Nh0OetA' \
+--data '{
+    "title": "mini scooter",
+    "price": 556,
+    "imageBase64": "data:image/jpeg;base64,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"
+}'
 
-To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
+- Ad creation request with out image base 64
 
-```bash
-sam delete --stack-name ads-api
-```
+curl --location 'https://58jc7qaj13.execute-api.us-east-1.amazonaws.com/prod/ads' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: eyJraWQiOiJtRGlQNHlmR2Rka1RmRlRrWXJsYXpIdzlSTlMzMnFVZFE0RXpEWHZveGpZPSIsImFsZyI6IlJTMjU2In0.eyJhdF9oYXNoIjoiRVBFUmRSdGdHYkxDSUdqVjhNWVFiUSIsInN1YiI6IjM0Zjg4NGI4LTUwMTEtNzAxYS1mMDBhLTQzOTM3ZTc2MGE5YiIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3VzLWVhc3QtMV9UNG1PRUw4akIiLCJjb2duaXRvOnVzZXJuYW1lIjoicGFtYWwiLCJhdWQiOiI0M2F1NjRwbWtwZmFlYXNyOHJidGhzcHN2ZyIsImV2ZW50X2lkIjoiY2VkYTRmYzQtMGZhMy00N2Y2LWIyMzItMzIzYzA1M2ExMTEyIiwidG9rZW5fdXNlIjoiaWQiLCJhdXRoX3RpbWUiOjE3NjU1NTg5MjEsImV4cCI6MTc2NTU2MjUyMSwiaWF0IjoxNzY1NTU4OTIxLCJqdGkiOiJmODA5Zjg0Ny0yNWQyLTQzMWEtYWJmOC0xY2JlYjIwN2Y0NjciLCJlbWFpbCI6InAucy5qYXlhd2lja3JhbWEud29ya0BnbWFpbC5jb20ifQ.YQn2cAvFe2bCo90-jZUhHeGM937PrWiKxIqYqwH3OmGqaozTJg6USd3Uw4dIKA9u3Q4A_HZhVa2QxT2aDYvqz14J57Y3kvRFIEmHwPVpMvXVJwlGm4MtqPy8dhuYvM59CPdM9BWxs87Z9FACbNdYQ0kuUgeZYpotwXI6aLihMTBfENJqyESWHEiZ2NT7DvCq75CmTgVlpFuBfCfZgK75YwIePCToxaTvla0BqPMkFVir2hOKrtwzoXBwoIK6igvQrC_53yn_Y_Li3vuxqEkV-oYmiPnyLkLyjIrfontet7k1MdflzIGn2v0AdlHb9TjGi5BcjHMF9Q0LTa0Nh0OetA' \
+--data '{
+    "title": "wheel",
+    "price": 556
+}'
 
-## Resources
 
-See the [AWS SAM developer guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) for an introduction to SAM specification, the SAM CLI, and serverless application concepts.
 
-Next, you can use AWS Serverless Application Repository to deploy ready to use Apps that go beyond hello world samples and learn how authors developed their applications: [AWS Serverless Application Repository main page](https://aws.amazon.com/serverless/serverlessrepo/)

@@ -45,12 +45,12 @@ Resources:
       TopicName: !Sub "AdsNotifications-${AWS::AccountId}"
       DisplayName: "Ads API Notifications"
 
-  AdsEmailSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: !Ref AdsNotificationTopic
-      Protocol: email
-      Endpoint: p.s.jayawickrama.work@gmail.com
+  # AdsEmailSubscription:
+  #   Type: AWS::SNS::Subscription
+  #   Properties:
+  #     TopicArn: !Ref AdsNotificationTopic
+  #     Protocol: email
+  #     Endpoint: p.s.jayawickrama.work@gmail.com
 
   AdsUserPool:
     Type: AWS::Cognito::UserPool
@@ -91,11 +91,11 @@ Resources:
     Properties:
       Name: AdsApi
       StageName: prod
-      # Auth:
-      #   DefaultAuthorizer: CognitoAuth
-      #   Authorizers:
-      #     CognitoAuth:
-      #       UserPoolArn: !GetAtt AdsUserPool.Arn
+      Auth:
+        DefaultAuthorizer: CognitoAuth
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !GetAtt AdsUserPool.Arn
 
             # Identity:
             #   Header: Authorization # Default
@@ -127,8 +127,8 @@ Resources:
             RestApiId: !Ref AdsApi
             Path: /ads
             Method: post
-            # Auth:
-            #   Authorizer: CognitoAuth
+            Auth:
+              Authorizer: CognitoAuth
 
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
