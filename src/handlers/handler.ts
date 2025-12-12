@@ -1,52 +1,26 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-
-/**
- *
- * Event doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html#api-gateway-simple-proxy-for-lambda-input-format
- * @param {Object} event - API Gateway Lambda Proxy Input Format
- *
- * Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
- * @returns {Object} object - API Gateway Lambda Proxy Output Format
- *
- */
-
-// export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-//     try {
-//         return {
-//             statusCode: 200,
-//             body: JSON.stringify({
-//                 message: 'hello world pamal',
-//             }),
-//         };
-//     } catch (err) {
-//         console.log(err);
-//         return {
-//             statusCode: 500,
-//             body: JSON.stringify({
-//                 message: 'some error happened',
-//             }),
-//         };
-//     }
-// };
-
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as DynamoDBService from '../services/dynamoDBService';
 import * as S3Service from '../services/s3Service';
 import * as SNSService from '../services/snsNotificationService';
-// import { v4 as uuidv4 } from 'uuid';
-import { randomUUID } from 'crypto';
 import { CreateAdRequest } from '../types/createAdRequest';
 import { AdItem } from '../types/AdItem';
 import { PublishCommandOutput } from '@aws-sdk/client-sns/dist-types/commands/PublishCommand';
-
-const client = new DynamoDBClient({});
-const dynamo = DynamoDBDocumentClient.from(client);
-const TABLE_NAME = process.env.TABLE_NAME || 'AdsTable';
+import { logger } from '../utils/logger';
 
 export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const requestId = event.requestContext?.requestId || event.requestContext?.requestId || 'unknown';
+  
+  logger.setRequestId(requestId);
+
+  logger.info('Received create ad request', {
+    requestId,
+    httpMethod: event.httpMethod,
+    path: event.path,
+  });
+
   try {
     if (!event.body) {
+      logger.error('Missing request body', { requestId });
       return {
         statusCode: 400,
         headers: {
@@ -58,8 +32,10 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
     }
 
     const data: CreateAdRequest = JSON.parse(event.body);
+    logger.info('Parsed request body', { requestId, hasImage: !!data.imageBase64 });
 
     if (!data.title || !data.price) {
+      logger.error('Validation failed: missing required fields', { requestId, data });
       return {
         statusCode: 400,
         headers: {
@@ -72,30 +48,38 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
 
     let imageUrl: string | undefined;
     if (data.imageBase64) {
-      console.log(`Uploading image to S3`);
+      logger.info('Uploading image to S3', { requestId });
       try {
         imageUrl = await S3Service.uploadImage(data.imageBase64);
-        console.log(`Image uploaded: ${imageUrl}`);
+        logger.info('Image uploaded successfully', { requestId, imageUrl });
       } catch (imageError) {
-        console.error(`Image upload failed:`, imageError);
-        // Continue without image - don't fail entire request
+        logger.error('Image upload failed', imageError, { requestId });
       }
     }
 
     const item: AdItem = await DynamoDBService.post(data, imageUrl);
-    console.log('Ad created in DynamoDB:', item);
+    logger.info('Ad created in DynamoDB', { requestId, adId: item.id });
 
      let snsResult: PublishCommandOutput | undefined; 
     try {
       snsResult = await SNSService.sendAdCreatedNotification(item);
       if (snsResult) {
-        console.log('SNS notification sent successfully. MessageId:', snsResult);
+        logger.info('SNS notification sent successfully', {
+          requestId,
+          messageId: snsResult.MessageId,
+        });
       } else {
-        console.warn('SNS notification was skipped (no topic configured)');
+        logger.warn('SNS notification was skipped (no topic configured)', { requestId });
       }
     } catch (snsError) {
-      console.error('SNS notification failed:', snsError);
+      logger.error('SNS notification failed', snsError, { requestId });
     }
+
+    logger.info('Ad creation completed successfully', {
+      requestId,
+      adId: item.id,
+      statusCode: 201,
+    });
 
     return {
       statusCode: 201,
@@ -110,8 +94,7 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       }),
     };
   } catch (error: any) {
-    console.error('Error creating ad:', error);
-
+    logger.error('Error creating ad', error, { requestId });
     return {
       statusCode: 500,
       headers: {
