@@ -37,7 +37,7 @@ jobs:
           sam build
           sam deploy \
           --stack-name ads-api-stack \
-          --s3-bucket ${{ secrets.AWS_S3_BUCKET }} \  
+          --resolve-s3 \  
           --capabilities CAPABILITY_IAM \
           --region ${{ secrets.AWS_REGION }} \
           --no-confirm-changeset \
