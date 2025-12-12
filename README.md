@@ -114,7 +114,29 @@ After deployment, the following outputs will be displayed:
 
 for further reference use the link - https://docs.google.com/document/d/1YQ5AAcf5g6nMk_W75RjacJgtW68njdAw239Fx-efY5I/edit?usp=sharing
 
-### API Documentation 
+### How to Test SNS Notification
+
+- Go to AWS SNS and find the topic (AdsNotifications-${AWS::AccountId})
+- Create a subscription (e.g., subscription via email)
+- Verify the subscription
+- When an ad is created, an email notification will be sent to the provided email address
+
+for further reference use the link - https://docs.google.com/document/d/1YQ5AAcf5g6nMk_W75RjacJgtW68njdAw239Fx-efY5I/edit?usp=sharing
+
+### How to Test Image deployed to the S3 bucket 
+
+- When an ad creation request is made with an image base64, an ImageUrl is returned in the response
+- The image URL link can be clicked to view the image that corresponds to the uploaded base64 data
+
+for further reference use the link - https://docs.google.com/document/d/1YQ5AAcf5g6nMk_W75RjacJgtW68njdAw239Fx-efY5I/edit?usp=sharing
+
+### How to Run Unit Test
+- npm run unit
+
+
+
+
+### API Documentation
 
 - Ad creation request with image base 64
 

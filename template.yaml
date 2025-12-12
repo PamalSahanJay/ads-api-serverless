@@ -45,12 +45,12 @@ Resources:
       TopicName: !Sub "AdsNotifications-${AWS::AccountId}"
       DisplayName: "Ads API Notifications"
 
-  AdsEmailSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: !Ref AdsNotificationTopic
-      Protocol: email
-      Endpoint: p.s.jayawickrama.work@gmail.com
+  # AdsEmailSubscription:
+  #   Type: AWS::SNS::Subscription
+  #   Properties:
+  #     TopicArn: !Ref AdsNotificationTopic
+  #     Protocol: email
+  #     Endpoint: p.s.jayawickrama.work@gmail.com
 
   AdsUserPool:
     Type: AWS::Cognito::UserPool
