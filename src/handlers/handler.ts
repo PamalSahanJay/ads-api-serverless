@@ -6,11 +6,12 @@ import { CreateAdRequest } from '../types/createAdRequest';
 import { AdItem } from '../types/AdItem';
 import { PublishCommandOutput } from '@aws-sdk/client-sns/dist-types/commands/PublishCommand';
 import { logger } from '../utils/logger';
-import { success, error } from '../utils/apiResponse';
+import { successResponse, errorResponse } from '../utils/apiResponse';
+import { ValidationError, AppError } from '../utils/errors';
 
 export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext?.requestId || event.requestContext?.requestId || 'unknown';
-  
+
   logger.setRequestId(requestId);
 
   logger.info('Received create ad request', {
@@ -21,16 +22,28 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
 
   try {
     if (!event.body) {
-      logger.error('Missing request body', { requestId });
-      return error(400, `Missing request body`, "request id : " + requestId);
+      throw new ValidationError('Request body is required');
     }
 
-    const data: CreateAdRequest = JSON.parse(event.body);
+    let data: CreateAdRequest;
+    try {
+      data = JSON.parse(event.body);
+    } catch (parseError) {
+      throw new ValidationError('Invalid JSON in request body');
+    }
+
     logger.info('Parsed request body', { requestId, hasImage: !!data.imageBase64 });
 
-    if (!data.title || !data.price) {
-      logger.error('Validation failed: missing required fields', { requestId, data });
-      return error(400,'Both title and price are required', "request id : " + requestId);
+    if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
+      throw new ValidationError('Title is required and must be a non-empty string');
+    }
+
+    if (data.price === undefined || data.price === null) {
+      throw new ValidationError('Price is required');
+    }
+
+    if (typeof data.price !== 'number' || data.price < 0) {
+      throw new ValidationError('Price must be a positive number');
     }
 
     let imageUrl: string | undefined;
@@ -41,13 +54,14 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
         logger.info('Image uploaded successfully', { requestId, imageUrl });
       } catch (imageError) {
         logger.error('Image upload failed', imageError, { requestId });
+        throw imageError;
       }
     }
 
     const item: AdItem = await DynamoDBService.post(data, imageUrl, requestId);
     logger.info('Ad created in DynamoDB', { requestId, adId: item.id });
 
-     let snsResult: PublishCommandOutput | undefined; 
+    let snsResult: PublishCommandOutput | undefined;
     try {
       snsResult = await SNSService.sendAdCreatedNotification(item, requestId);
       if (snsResult) {
@@ -55,10 +69,9 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
           requestId,
           messageId: snsResult.MessageId,
         });
-      } else {
-        logger.warn('SNS notification was skipped (no topic configured)', { requestId });
       }
     } catch (snsError) {
+      // Log but don't fail the request - notification is not critical
       logger.error('SNS notification failed', snsError, { requestId });
     }
 
@@ -68,13 +81,29 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       statusCode: 201,
     });
 
-    return success(201, {
+    return successResponse(201, {
       message: 'Ad created successfully',
       ad: item,
       snsMessageId: snsResult ? snsResult.MessageId : null,
     });
-  } catch (error: any) {
-    logger.error('Error creating ad', error, { requestId });
-    return error(500, 'Internal server error : request id : ' + requestId, error.message);
+  } catch (error) {
+
+    if (error instanceof AppError) {
+      logger.error('Application error', {
+        code: error.code,
+        message: error.message,
+        statusCode: error.statusCode
+      }, {"requestId": requestId});
+      return errorResponse(error, requestId);
+    }
+
+    logger.error('Unexpected error creating ad', error, {"requestId": requestId});
+    const appError = new AppError(
+      'An unexpected error occurred while creating the ad',
+      500,
+      'INTERNAL_ERROR'
+    );
+    return errorResponse(appError, requestId);
+
   }
 };

@@ -1,6 +1,7 @@
 import { SNSClient, PublishCommand, PublishCommandOutput } from '@aws-sdk/client-sns';
 import { AdItem } from '../types/AdItem';
 import { logger } from '../utils/logger';
+import { SNSError } from '../utils/errors';
 
 const snsClient = new SNSClient({});
 const TOPIC_ARN = process.env.SNS_TOPIC_ARN;
@@ -43,8 +44,14 @@ export const sendAdCreatedNotification = async (ad: AdItem, requestId?: string):
         logger.debug('SNS notification sent', { requestId, messageId: result.MessageId });
         return result;
 
-    } catch (error) {
+    } catch (error: any) {
         logger.error('Error sending SNS notification', error, { requestId });
-        throw new Error('Error sending SNS notification');
+        
+        // Handle specific SNS errors
+        if (error.name === 'NotFound' || error.name === 'TopicNotFound') {
+            throw new SNSError('SNS topic not found', error);
+        }
+        
+        throw new SNSError('Failed to send SNS notification', error);
     }
 };
