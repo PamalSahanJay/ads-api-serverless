@@ -6,6 +6,7 @@ import { CreateAdRequest } from '../types/createAdRequest';
 import { AdItem } from '../types/AdItem';
 import { PublishCommandOutput } from '@aws-sdk/client-sns/dist-types/commands/PublishCommand';
 import { logger } from '../utils/logger';
+import { success, error } from '../utils/apiResponse';
 
 export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext?.requestId || event.requestContext?.requestId || 'unknown';
@@ -21,14 +22,7 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
   try {
     if (!event.body) {
       logger.error('Missing request body', { requestId });
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ message: 'Missing request body' }),
-      };
+      return error(400, `Missing request body`, "request id : " + requestId);
     }
 
     const data: CreateAdRequest = JSON.parse(event.body);
@@ -36,33 +30,26 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
 
     if (!data.title || !data.price) {
       logger.error('Validation failed: missing required fields', { requestId, data });
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ message: 'title and price are required' }),
-      };
+      return error(400,'Both title and price are required', "request id : " + requestId);
     }
 
     let imageUrl: string | undefined;
     if (data.imageBase64) {
       logger.info('Uploading image to S3', { requestId });
       try {
-        imageUrl = await S3Service.uploadImage(data.imageBase64);
+        imageUrl = await S3Service.uploadImage(data.imageBase64, requestId);
         logger.info('Image uploaded successfully', { requestId, imageUrl });
       } catch (imageError) {
         logger.error('Image upload failed', imageError, { requestId });
       }
     }
 
-    const item: AdItem = await DynamoDBService.post(data, imageUrl);
+    const item: AdItem = await DynamoDBService.post(data, imageUrl, requestId);
     logger.info('Ad created in DynamoDB', { requestId, adId: item.id });
 
      let snsResult: PublishCommandOutput | undefined; 
     try {
-      snsResult = await SNSService.sendAdCreatedNotification(item);
+      snsResult = await SNSService.sendAdCreatedNotification(item, requestId);
       if (snsResult) {
         logger.info('SNS notification sent successfully', {
           requestId,
@@ -81,30 +68,13 @@ export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
       statusCode: 201,
     });
 
-    return {
-      statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        message: 'Ad created successfully',
-        ad: item,
-        snsMessageId: snsResult ? snsResult.MessageId : null,
-      }),
-    };
+    return success(201, {
+      message: 'Ad created successfully',
+      ad: item,
+      snsMessageId: snsResult ? snsResult.MessageId : null,
+    });
   } catch (error: any) {
     logger.error('Error creating ad', error, { requestId });
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        message: 'Internal server error',
-        error: error.message,
-      }),
-    };
+    return error(500, 'Internal server error : request id : ' + requestId, error.message);
   }
 };

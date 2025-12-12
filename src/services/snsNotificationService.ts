@@ -1,16 +1,20 @@
 import { SNSClient, PublishCommand, PublishCommandOutput } from '@aws-sdk/client-sns';
 import { AdItem } from '../types/AdItem';
+import { logger } from '../utils/logger';
 
 const snsClient = new SNSClient({});
 const TOPIC_ARN = process.env.SNS_TOPIC_ARN;
 
-export const sendAdCreatedNotification = async (ad: AdItem): Promise<PublishCommandOutput | undefined> => {
+export const sendAdCreatedNotification = async (ad: AdItem, requestId?: string): Promise<PublishCommandOutput | undefined> => {
     try {
+        logger.info('Sending SNS notification', { requestId });
 
         if (!TOPIC_ARN) {
-            console.warn('SNS_TOPIC_ARN not configured, skipping notification');
-            return undefined;
+            logger.error('SNS_TOPIC_ARN not configured, skipping notification', { requestId });
+            throw new Error('SNS_TOPIC_ARN not configured');
         }
+
+        logger.debug('Preparing SNS notification', { requestId, topicArn: TOPIC_ARN, adId: ad.id });
 
         const message = {
             event: 'AD_CREATED',
@@ -36,10 +40,11 @@ export const sendAdCreatedNotification = async (ad: AdItem): Promise<PublishComm
         });
 
         const result = await snsClient.send(command);
-        console.log('SNS notification sent:', result.MessageId);
+        logger.debug('SNS notification sent', { requestId, messageId: result.MessageId });
         return result;
 
     } catch (error) {
-        console.error('Error sending SNS notification:', error);
+        logger.error('Error sending SNS notification', error, { requestId });
+        throw new Error('Error sending SNS notification');
     }
 };
