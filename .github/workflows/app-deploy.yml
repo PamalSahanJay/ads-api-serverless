@@ -32,13 +32,12 @@ jobs:
           aws-region: us-east-1
 
       - name: Build and Deploy API
-        # bucket name - ads-api-sam-deployments
         run: |
           sam build
           sam deploy \
-          --stack-name ads-api-stack \
-          --resolve-s3 \  
-          --capabilities CAPABILITY_IAM \
-          --region ${{ secrets.AWS_REGION }} \
-          --no-confirm-changeset \
-          --no-fail-on-empty-changeset
+            --stack-name ads-api-stack \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ secrets.AWS_REGION }} \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
