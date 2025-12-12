@@ -31,14 +31,20 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import * as DynamoDBService from '../services/dynamoDbService';
+import * as S3Service from '../services/s3Service';
+import * as SNSService from '../services/snsNotificationService';
 // import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'crypto';
+import { CreateAdRequest } from '../types/CreateAdRequest';
+import { AdItem } from '../types/AdItem';
+import { PublishCommandOutput } from '@aws-sdk/client-sns/dist-types/commands/PublishCommand';
 
 const client = new DynamoDBClient({});
 const dynamo = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = process.env.TABLE_NAME || 'AdsTable';
 
-export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const createAd = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     if (!event.body) {
       return {
@@ -51,9 +57,9 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       };
     }
 
-    const { title, price } = JSON.parse(event.body);
+    const data: CreateAdRequest = JSON.parse(event.body);
 
-    if (!title || !price) {
+    if (!data.title || !data.price) {
       return {
         statusCode: 400,
         headers: {
@@ -64,20 +70,32 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       };
     }
 
-    const id = randomUUID();
-    const createdAt = new Date().toISOString();
+    let imageUrl: string | undefined;
+    if (data.imageBase64) {
+      console.log(`Uploading image to S3`);
+      try {
+        imageUrl = await S3Service.uploadImage(data.imageBase64);
+        console.log(`Image uploaded: ${imageUrl}`);
+      } catch (imageError) {
+        console.error(`Image upload failed:`, imageError);
+        // Continue without image - don't fail entire request
+      }
+    }
 
-    const item = {
-      id,
-      title,
-      price: Number(price),
-      createdAt,
-    };
+    const item: AdItem = await DynamoDBService.post(data, imageUrl);
+    console.log('Ad created in DynamoDB:', item);
 
-    await dynamo.send(new PutCommand({
-      TableName: TABLE_NAME,
-      Item: item,
-    }));
+     let snsResult: PublishCommandOutput | undefined; 
+    try {
+      snsResult = await SNSService.sendAdCreatedNotification(item);
+      if (snsResult) {
+        console.log('SNS notification sent successfully. MessageId:', snsResult);
+      } else {
+        console.warn('SNS notification was skipped (no topic configured)');
+      }
+    } catch (snsError) {
+      console.error('SNS notification failed:', snsError);
+    }
 
     return {
       statusCode: 201,
@@ -88,6 +106,7 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
       body: JSON.stringify({
         message: 'Ad created successfully',
         ad: item,
+        snsMessageId: snsResult ? snsResult.MessageId : null,
       }),
     };
   } catch (error: any) {
