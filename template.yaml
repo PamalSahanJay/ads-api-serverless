@@ -91,11 +91,11 @@ Resources:
     Properties:
       Name: AdsApi
       StageName: prod
-      # Auth:
-      #   DefaultAuthorizer: CognitoAuth
-      #   Authorizers:
-      #     CognitoAuth:
-      #       UserPoolArn: !GetAtt AdsUserPool.Arn
+      Auth:
+        DefaultAuthorizer: CognitoAuth
+        Authorizers:
+          CognitoAuth:
+            UserPoolArn: !GetAtt AdsUserPool.Arn
 
             # Identity:
             #   Header: Authorization # Default
@@ -127,8 +127,8 @@ Resources:
             RestApiId: !Ref AdsApi
             Path: /ads
             Method: post
-            # Auth:
-            #   Authorizer: CognitoAuth
+            Auth:
+              Authorizer: CognitoAuth
 
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
