@@ -14,7 +14,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
+      - name: Setup Node.js  # ADD THIS STEP
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
       - name: Install AWS SAM CLI
         uses: aws-actions/setup-sam@v2
 
