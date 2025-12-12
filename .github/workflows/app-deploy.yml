@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: '24'
       - run: npm i
+      - name: Install esbuild globally  # Add this step
+        run: npm install -g esbuild
       - name: Install AWS SAM CLI
         uses: aws-actions/setup-sam@v2
 
